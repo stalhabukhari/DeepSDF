@@ -370,3 +370,4 @@ dmypy.json
 .pyre/
 
 # End of https://www.gitignore.io/api/c++,cmake,python,pycharm,clion+all,pycharm+all,jupyternotebooks
+bin/

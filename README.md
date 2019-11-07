@@ -4,6 +4,9 @@ This is an implementation of the CVPR '19 paper "DeepSDF: Learning Continuous Si
 
 [![DeepSDF Video](https://img.youtube.com/vi/LILRJzMQw5o/0.jpg)](https://www.youtube.com/watch?v=LILRJzMQw5o)
 
+## Acknowledgements
+This repo is a joint work of DeepSDF and 3D-R2N2 ([link](https://github.com/chrischoy/3D-R2N2/))
+
 ## Citing DeepSDF
 
 If you use DeepSDF in your research, please cite the

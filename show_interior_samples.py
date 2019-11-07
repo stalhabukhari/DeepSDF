@@ -16,7 +16,9 @@ if __name__ == "__main__":
 
     xyz_neg = data[1][:, 0:3].numpy().astype(ctypes.c_float)
 
-    win = pango.CreateWindowAndBind("Interior Samples | " + npz_filename, 640, 480)
+    win = pango.CreateWindowAndBind(
+        "Interior Samples | " + npz_filename, 640, 480
+    )
     gl.glEnable(gl.GL_DEPTH_TEST)
 
     pm = pango.ProjectionMatrix(640, 480, 420, 420, 320, 240, 0.1, 1000)
@@ -50,7 +52,10 @@ if __name__ == "__main__":
         gl.glColor3ub(255, 255, 255)
 
         gl.glVertexPointer(
-            3, gl.GL_FLOAT, 0, xyz_neg.ctypes.data_as(ctypes.POINTER(ctypes.c_float))
+            3,
+            gl.GL_FLOAT,
+            0,
+            xyz_neg.ctypes.data_as(ctypes.POINTER(ctypes.c_float)),
         )
 
         gl.glDrawArrays(gl.GL_POINTS, 0, xyz_neg.shape[0])

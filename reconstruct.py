@@ -27,7 +27,9 @@ def reconstruct(
     def adjust_learning_rate(
         initial_lr, optimizer, num_iterations, decreased_by, adjust_lr_every
     ):
-        lr = initial_lr * ((1 / decreased_by) ** (num_iterations // adjust_lr_every))
+        lr = initial_lr * (
+            (1 / decreased_by) ** (num_iterations // adjust_lr_every)
+        )
         for param_group in optimizer.param_groups:
             param_group["lr"] = lr
 
@@ -169,7 +171,9 @@ if __name__ == "__main__":
 
     saved_model_state = torch.load(
         os.path.join(
-            args.experiment_directory, ws.model_params_subdir, args.checkpoint + ".pth"
+            args.experiment_directory,
+            ws.model_params_subdir,
+            args.checkpoint + ".pth",
         )
     )
     saved_model_epoch = saved_model_state["epoch"]
@@ -181,7 +185,9 @@ if __name__ == "__main__":
     with open(args.split_filename, "r") as f:
         split = json.load(f)
 
-    npz_filenames = deep_sdf.data.get_instance_filenames(args.data_source, split)
+    npz_filenames = deep_sdf.data.get_instance_filenames(
+        args.data_source, split
+    )
 
     random.shuffle(npz_filenames)
 
@@ -193,7 +199,9 @@ if __name__ == "__main__":
     rerun = 0
 
     reconstruction_dir = os.path.join(
-        args.experiment_directory, ws.reconstructions_subdir, str(saved_model_epoch)
+        args.experiment_directory,
+        ws.reconstructions_subdir,
+        str(saved_model_epoch),
     )
 
     if not os.path.isdir(reconstruction_dir):
@@ -216,7 +224,9 @@ if __name__ == "__main__":
         if "npz" not in npz:
             continue
 
-        full_filename = os.path.join(args.data_source, ws.sdf_samples_subdir, npz)
+        full_filename = os.path.join(
+            args.data_source, ws.sdf_samples_subdir, npz
+        )
 
         logging.debug("loading {}".format(npz))
 
@@ -229,10 +239,13 @@ if __name__ == "__main__":
                     reconstruction_meshes_dir, npz[:-4] + "-" + str(k + rerun)
                 )
                 latent_filename = os.path.join(
-                    reconstruction_codes_dir, npz[:-4] + "-" + str(k + rerun) + ".pth"
+                    reconstruction_codes_dir,
+                    npz[:-4] + "-" + str(k + rerun) + ".pth",
                 )
             else:
-                mesh_filename = os.path.join(reconstruction_meshes_dir, npz[:-4])
+                mesh_filename = os.path.join(
+                    reconstruction_meshes_dir, npz[:-4]
+                )
                 latent_filename = os.path.join(
                     reconstruction_codes_dir, npz[:-4] + ".pth"
                 )
@@ -277,7 +290,11 @@ if __name__ == "__main__":
                 start = time.time()
                 with torch.no_grad():
                     deep_sdf.mesh.create_mesh(
-                        decoder, latent, mesh_filename, N=256, max_batch=int(2 ** 18)
+                        decoder,
+                        latent,
+                        mesh_filename,
+                        N=256,
+                        max_batch=int(2 ** 18),
                     )
                 logging.debug("total time: {}".format(time.time() - start))
 

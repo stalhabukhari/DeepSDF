@@ -48,7 +48,10 @@ class WarmupLearningRateSchedule(LearningRateSchedule):
     def get_learning_rate(self, epoch):
         if epoch > self.length:
             return self.warmed_up
-        return self.initial + (self.warmed_up - self.initial) * epoch / self.length
+        return (
+            self.initial
+            + (self.warmed_up - self.initial) * epoch / self.length
+        )
 
 
 def get_learning_rate_schedules(specs):
@@ -76,7 +79,9 @@ def get_learning_rate_schedules(specs):
                 )
             )
         elif schedule_specs["Type"] == "Constant":
-            schedules.append(ConstantLearningRateSchedule(schedule_specs["Value"]))
+            schedules.append(
+                ConstantLearningRateSchedule(schedule_specs["Value"])
+            )
 
         else:
             raise Exception(
@@ -100,7 +105,9 @@ def save_model(experiment_directory, filename, decoder, epoch):
 
 def save_optimizer(experiment_directory, filename, optimizer, epoch):
 
-    optimizer_params_dir = ws.get_optimizer_params_dir(experiment_directory, True)
+    optimizer_params_dir = ws.get_optimizer_params_dir(
+        experiment_directory, True
+    )
 
     torch.save(
         {"epoch": epoch, "optimizer_state_dict": optimizer.state_dict()},
@@ -146,7 +153,9 @@ def load_latent_vectors(experiment_directory, filename, lat_vecs):
     )
 
     if not os.path.isfile(full_filename):
-        raise Exception('latent state file "{}" does not exist'.format(full_filename))
+        raise Exception(
+            'latent state file "{}" does not exist'.format(full_filename)
+        )
 
     data = torch.load(full_filename)
 
@@ -286,14 +295,22 @@ def main_function(experiment_directory, continue_from, batch_split):
     def save_latest(epoch):
 
         save_model(experiment_directory, "latest.pth", decoder, epoch)
-        save_optimizer(experiment_directory, "latest.pth", optimizer_all, epoch)
-        save_latent_vectors(experiment_directory, "latest.pth", lat_vecs, epoch)
+        save_optimizer(
+            experiment_directory, "latest.pth", optimizer_all, epoch
+        )
+        save_latent_vectors(
+            experiment_directory, "latest.pth", lat_vecs, epoch
+        )
 
     def save_checkpoints(epoch):
 
         save_model(experiment_directory, str(epoch) + ".pth", decoder, epoch)
-        save_optimizer(experiment_directory, str(epoch) + ".pth", optimizer_all, epoch)
-        save_latent_vectors(experiment_directory, str(epoch) + ".pth", lat_vecs, epoch)
+        save_optimizer(
+            experiment_directory, str(epoch) + ".pth", optimizer_all, epoch
+        )
+        save_latent_vectors(
+            experiment_directory, str(epoch) + ".pth", lat_vecs, epoch
+        )
 
     def signal_handler(sig, frame):
         logging.info("Stopping early...")
@@ -321,8 +338,12 @@ def main_function(experiment_directory, continue_from, batch_split):
     maxT = clamp_dist
     enforce_minmax = True
 
-    do_code_regularization = get_spec_with_default(specs, "CodeRegularization", True)
-    code_reg_lambda = get_spec_with_default(specs, "CodeRegularizationLambda", 1e-4)
+    do_code_regularization = get_spec_with_default(
+        specs, "CodeRegularization", True
+    )
+    code_reg_lambda = get_spec_with_default(
+        specs, "CodeRegularizationLambda", 1e-4
+    )
 
     code_bound = get_spec_with_default(specs, "CodeBound", None)
 
@@ -343,8 +364,12 @@ def main_function(experiment_directory, continue_from, batch_split):
         data_source, train_split, num_samp_per_scene, load_ram=False
     )
 
-    num_data_loader_threads = get_spec_with_default(specs, "DataLoaderThreads", 1)
-    logging.debug("loading data with {} threads".format(num_data_loader_threads))
+    num_data_loader_threads = get_spec_with_default(
+        specs, "DataLoaderThreads", 1
+    )
+    logging.debug(
+        "loading data with {} threads".format(num_data_loader_threads)
+    )
 
     sdf_loader = data_utils.DataLoader(
         sdf_dataset,
@@ -366,7 +391,8 @@ def main_function(experiment_directory, continue_from, batch_split):
     torch.nn.init.normal_(
         lat_vecs.weight.data,
         0.0,
-        get_spec_with_default(specs, "CodeInitStdDev", 1.0) / math.sqrt(latent_size),
+        get_spec_with_default(specs, "CodeInitStdDev", 1.0)
+        / math.sqrt(latent_size),
     )
 
     logging.debug(
@@ -414,13 +440,29 @@ def main_function(experiment_directory, continue_from, batch_split):
             experiment_directory, continue_from + ".pth", optimizer_all
         )
 
-        loss_log, lr_log, timing_log, lat_mag_log, param_mag_log, log_epoch = load_logs(
-            experiment_directory
-        )
+        (
+            loss_log,
+            lr_log,
+            timing_log,
+            lat_mag_log,
+            param_mag_log,
+            log_epoch,
+        ) = load_logs(experiment_directory)
 
         if not log_epoch == model_epoch:
-            loss_log, lr_log, timing_log, lat_mag_log, param_mag_log = clip_logs(
-                loss_log, lr_log, timing_log, lat_mag_log, param_mag_log, model_epoch
+            (
+                loss_log,
+                lr_log,
+                timing_log,
+                lat_mag_log,
+                param_mag_log,
+            ) = clip_logs(
+                loss_log,
+                lr_log,
+                timing_log,
+                lat_mag_log,
+                param_mag_log,
+                model_epoch,
             )
 
         if not (model_epoch == optimizer_epoch and model_epoch == lat_epoch):
@@ -498,7 +540,9 @@ def main_function(experiment_directory, continue_from, batch_split):
                 if enforce_minmax:
                     pred_sdf = torch.clamp(pred_sdf, minT, maxT)
 
-                chunk_loss = loss_l1(pred_sdf, sdf_gt[i].cuda()) / num_sdf_samples
+                chunk_loss = (
+                    loss_l1(pred_sdf, sdf_gt[i].cuda()) / num_sdf_samples
+                )
 
                 if do_code_regularization:
                     l2_size_loss = torch.sum(torch.norm(batch_vecs, dim=1))
@@ -527,7 +571,9 @@ def main_function(experiment_directory, continue_from, batch_split):
         seconds_elapsed = end - start
         timing_log.append(seconds_elapsed)
 
-        lr_log.append([schedule.get_learning_rate(epoch) for schedule in lr_schedules])
+        lr_log.append(
+            [schedule.get_learning_rate(epoch) for schedule in lr_schedules]
+        )
 
         lat_mag_log.append(get_mean_latent_vector_magnitude(lat_vecs))
 
@@ -554,7 +600,9 @@ if __name__ == "__main__":
 
     import argparse
 
-    arg_parser = argparse.ArgumentParser(description="Train a DeepSDF autodecoder")
+    arg_parser = argparse.ArgumentParser(
+        description="Train a DeepSDF autodecoder"
+    )
     arg_parser.add_argument(
         "--experiment",
         "-e",
@@ -588,4 +636,6 @@ if __name__ == "__main__":
 
     deep_sdf.configure_logging(args)
 
-    main_function(args.experiment_directory, args.continue_from, int(args.batch_split))
+    main_function(
+        args.experiment_directory, args.continue_from, int(args.batch_split)
+    )

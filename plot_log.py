@@ -64,7 +64,9 @@ def load_logs(experiment_directory, type):
 
     elif type == "lat_mag":
         ax.plot(logs["latent_magnitude"])
-        ax.set(xlabel="Epoch", ylabel="Magnitude", title="Latent Vector Magnitude")
+        ax.set(
+            xlabel="Epoch", ylabel="Magnitude", title="Latent Vector Magnitude"
+        )
 
     elif type == "param_mag":
         for _name, mags in logs["param_magnitude"].items():
@@ -83,7 +85,9 @@ if __name__ == "__main__":
 
     import argparse
 
-    arg_parser = argparse.ArgumentParser(description="Plot DeepSDF training logs")
+    arg_parser = argparse.ArgumentParser(
+        description="Plot DeepSDF training logs"
+    )
     arg_parser.add_argument(
         "--experiment",
         "-e",

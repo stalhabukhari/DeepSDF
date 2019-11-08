@@ -4,20 +4,18 @@ https://arxiv.org/pdf/1604.00449.pdf
 """
 import json
 import typing as t
-from collections import defaultdict
+from collections import defaultdict, Counter
 from pathlib import Path
 
 import numpy as np
 from functional import seq
 
-from common import cfg
-
-ConfigType = t.Dict[str, t.Dict[str, t.Any]]
+from common import ConfigType, cfg
 
 
-def generate_config(
+def generate_config_and_name_mapping(
     input_directory: str, dataset_description_path: str
-) -> ConfigType:
+) -> t.Tuple[ConfigType, t.Dict[str, str]]:
     with open(dataset_description_path) as f:
         description = json.load(f)
 
@@ -25,6 +23,11 @@ def generate_config(
 
     input_directory = Path(input_directory)
     output_config = {}
+    name_mapping = {}
+
+    non_normalized_count = 0
+    all_shapes_count = 0
+    non_normalized_shape_names = []
 
     for synset in description:
         an_id = synset["id"]
@@ -36,20 +39,53 @@ def generate_config(
             rendering_paths = seq(png_synset_paths).filter(
                 lambda a_path: a_path.parent.name == "rendering"
             )
+
             if rendering_paths.size() == 0:
-                print(
-                    "No renders at:", an_object_folder.absolute().as_posix()
+                print("No renders at:", an_object_folder.absolute().as_posix())
+                continue
+
+            normalized_model_path = (
+                rendering_paths[0].parent.parent
+                / "models"
+                / "model_normalized.obj"
+            )
+
+            if not normalized_model_path.exists():
+                non_normalized_count += 1
+                non_normalized_shape_names.append(
+                    normalized_model_path.parent.parent.parent.name
                 )
                 continue
+            all_shapes_count += 1
+
             partial_config[an_object_folder.name][
                 "renders"
             ] = rendering_paths.map(lambda a_path: a_path.as_posix()).to_list()
-            partial_config[an_object_folder.name]["model_path"] = (
-                rendering_paths[0].parent / "model_normalized.obj"
-            ).as_posix()
-        output_config[class_name] = partial_config
 
-    return output_config
+            partial_config[an_object_folder.name][
+                "model_path"
+            ] = normalized_model_path.as_posix()
+
+        output_config[an_id] = partial_config
+        name_mapping[an_id] = class_name
+
+    print(
+        f"Non normalized to all shapes ratio: "
+        f"{non_normalized_count / all_shapes_count:.4f}"
+    )
+    print(
+        f"Non normalized and all shapes counts: "
+        f"{non_normalized_count}, {all_shapes_count}"
+    )
+    print(
+        f"Names of non normalized shapes: "
+        f"{list(set(non_normalized_shape_names))}"
+    )
+    print(
+        f"Names of non normalized counts: "
+        f"{Counter(non_normalized_shape_names)}"
+    )
+    return output_config, name_mapping
 
 
 def config_to_split_by_object_id(
@@ -73,10 +109,10 @@ def config_to_split_by_object_id(
         valid_object_names = object_names[valid_indices]
 
         for object_name in train_object_names:
-            train_config[object_name] = synset_data[object_name]
+            train_config[synset_name][object_name] = synset_data[object_name]
 
         for object_name in valid_object_names:
-            valid_config[object_name] = synset_data[object_name]
+            valid_config[synset_name][object_name] = synset_data[object_name]
 
     return train_config, valid_config
 
@@ -108,9 +144,9 @@ def config_to_split_by_synset(
     return train_config, valid_config
 
 
-def dump_to_file(path: str, config: ConfigType) -> None:
+def dump_to_file(path: str, config: t.Dict[t.Any, t.Any]) -> None:
     with open(path, "w") as f:
-        json.dump(config, f, indent=4)
+        json.dump(config, f, indent=2)
 
 
 def main():
@@ -136,7 +172,11 @@ def main():
 
     args = parser.parse_args()
 
-    a_config = generate_config(args.input_directory, args.config_path)
+    a_config, class_mapping = generate_config_and_name_mapping(
+        args.input_directory, args.config_path
+    )
+
+    dump_to_file(cfg.CLASS_MAPPING, class_mapping)
 
     if args.split_by_object:
         splits = config_to_split_by_object_id(a_config)

@@ -8,7 +8,7 @@ import skimage.measure
 import time
 import torch
 
-import deep_sdf.utils
+import geon_nets.utils
 
 
 def create_mesh(
@@ -56,7 +56,7 @@ def create_mesh(
         ].cuda()
 
         samples[head : min(head + max_batch, num_samples), 3] = (
-            deep_sdf.utils.decode_sdf(decoder, latent_vec, sample_subset)
+            geon_nets.utils.decode_sdf(decoder, latent_vec, sample_subset)
             .squeeze(1)
             .detach()
             .cpu()

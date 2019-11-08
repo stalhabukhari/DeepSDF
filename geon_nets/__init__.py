@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # Copyright 2004-present Facebook. All Rights Reserved.
 
-from deep_sdf.data import *
-from deep_sdf.mesh import *
-from deep_sdf.metrics.chamfer import *
-from deep_sdf.utils import *
-from deep_sdf.workspace import *
+from geon_nets.data import *
+from geon_nets.mesh import *
+from geon_nets.metrics.chamfer import *
+from geon_nets.utils import *
+from geon_nets.workspace import *

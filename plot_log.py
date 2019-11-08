@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import torch
-import deep_sdf
-import deep_sdf.workspace as ws
+import geon_nets
+import geon_nets.workspace as ws
 
 
 def running_mean(x, N):
@@ -99,10 +99,10 @@ if __name__ == "__main__":
     )
     arg_parser.add_argument("--type", "-t", dest="type", default="loss")
 
-    deep_sdf.add_common_args(arg_parser)
+    geon_nets.add_common_args(arg_parser)
 
     args = arg_parser.parse_args()
 
-    deep_sdf.configure_logging(args)
+    geon_nets.configure_logging(args)
 
     load_logs(args.experiment_directory, args.type)

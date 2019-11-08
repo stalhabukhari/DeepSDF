@@ -2,7 +2,7 @@
 # Copyright 2004-present Facebook. All Rights Reserved.
 
 import ctypes
-import deep_sdf.data
+import geon_nets.data
 import sys
 
 import OpenGL.GL as gl
@@ -12,7 +12,7 @@ if __name__ == "__main__":
 
     npz_filename = sys.argv[1]
 
-    data = deep_sdf.data.read_sdf_samples_into_ram(npz_filename)
+    data = geon_nets.data.read_sdf_samples_into_ram(npz_filename)
 
     xyz_neg = data[1][:, 0:3].numpy().astype(ctypes.c_float)
 

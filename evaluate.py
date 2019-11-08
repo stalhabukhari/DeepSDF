@@ -8,8 +8,8 @@ import numpy as np
 import os
 import trimesh
 
-import deep_sdf
-import deep_sdf.workspace as ws
+import geon_nets
+import geon_nets.workspace as ws
 
 
 def evaluate(experiment_directory, checkpoint, data_dir, split_filename):
@@ -72,7 +72,7 @@ def evaluate(experiment_directory, checkpoint, data_dir, split_filename):
 
                 normalization_params = np.load(normalization_params_filename)
 
-                chamfer_dist = deep_sdf.metrics.chamfer.compute_trimesh_chamfer(
+                chamfer_dist = geon_nets.metrics.chamfer.compute_trimesh_chamfer(
                     ground_truth_points,
                     reconstruction,
                     normalization_params["offset"],
@@ -135,11 +135,11 @@ if __name__ == "__main__":
         help="The split to evaluate.",
     )
 
-    deep_sdf.add_common_args(arg_parser)
+    geon_nets.add_common_args(arg_parser)
 
     args = arg_parser.parse_args()
 
-    deep_sdf.configure_logging(args)
+    geon_nets.configure_logging(args)
 
     evaluate(
         args.experiment_directory,

@@ -9,8 +9,8 @@ import random
 import time
 import torch
 
-import deep_sdf
-import deep_sdf.workspace as ws
+import geon_nets
+import geon_nets.workspace as ws
 
 
 def reconstruct(
@@ -51,7 +51,7 @@ def reconstruct(
     for e in range(num_iterations):
 
         decoder.eval()
-        sdf_data = deep_sdf.data.unpack_sdf_samples_from_ram(
+        sdf_data = geon_nets.data.unpack_sdf_samples_from_ram(
             test_sdf, num_samples
         ).cuda()
         xyz = sdf_data[:, 0:3]
@@ -138,11 +138,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Skip meshes which have already been reconstructed.",
     )
-    deep_sdf.add_common_args(arg_parser)
+    geon_nets.add_common_args(arg_parser)
 
     args = arg_parser.parse_args()
 
-    deep_sdf.configure_logging(args)
+    geon_nets.configure_logging(args)
 
     def empirical_stat(latent_vecs, indices):
         lat_mat = torch.zeros(0).cuda()
@@ -185,7 +185,7 @@ if __name__ == "__main__":
     with open(args.split_filename, "r") as f:
         split = json.load(f)
 
-    npz_filenames = deep_sdf.data.get_instance_filenames(
+    npz_filenames = geon_nets.data.get_instance_filenames(
         args.data_source, split
     )
 
@@ -230,7 +230,7 @@ if __name__ == "__main__":
 
         logging.debug("loading {}".format(npz))
 
-        data_sdf = deep_sdf.data.read_sdf_samples_into_ram(full_filename)
+        data_sdf = geon_nets.data.read_sdf_samples_into_ram(full_filename)
 
         for k in range(repeat):
 
@@ -289,7 +289,7 @@ if __name__ == "__main__":
             if not save_latvec_only:
                 start = time.time()
                 with torch.no_grad():
-                    deep_sdf.mesh.create_mesh(
+                    geon_nets.mesh.create_mesh(
                         decoder,
                         latent,
                         mesh_filename,

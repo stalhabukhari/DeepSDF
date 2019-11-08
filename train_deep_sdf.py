@@ -11,8 +11,8 @@ import math
 import json
 import time
 
-import deep_sdf
-import deep_sdf.workspace as ws
+import geon_nets
+import geon_nets.workspace as ws
 
 
 class LearningRateSchedule:
@@ -360,7 +360,7 @@ def main_function(experiment_directory, continue_from, batch_split):
     with open(train_split_file, "r") as f:
         train_split = json.load(f)
 
-    sdf_dataset = deep_sdf.data.SDFSamples(
+    sdf_dataset = geon_nets.data.SDFSamples(
         data_source, train_split, num_samp_per_scene, load_ram=False
     )
 
@@ -630,11 +630,11 @@ if __name__ == "__main__":
         + "sizes in memory constrained environments.",
     )
 
-    deep_sdf.add_common_args(arg_parser)
+    geon_nets.add_common_args(arg_parser)
 
     args = arg_parser.parse_args()
 
-    deep_sdf.configure_logging(args)
+    geon_nets.configure_logging(args)
 
     main_function(
         args.experiment_directory, args.continue_from, int(args.batch_split)

@@ -7,8 +7,8 @@ import numpy as np
 import os
 import torch
 
-import deep_sdf
-import deep_sdf.workspace as ws
+import geon_nets
+import geon_nets.workspace as ws
 
 
 def code_to_mesh(experiment_directory, checkpoint, keep_normalized=False):
@@ -52,7 +52,7 @@ def code_to_mesh(experiment_directory, checkpoint, keep_normalized=False):
 
     data_source = specs["DataSource"]
 
-    instance_filenames = deep_sdf.data.get_instance_filenames(
+    instance_filenames = geon_nets.data.get_instance_filenames(
         data_source, train_split
     )
 
@@ -97,7 +97,7 @@ def code_to_mesh(experiment_directory, checkpoint, keep_normalized=False):
             scale = normalization_params["scale"]
 
         with torch.no_grad():
-            deep_sdf.mesh.create_mesh(
+            geon_nets.mesh.create_mesh(
                 decoder,
                 latent_vector,
                 mesh_filename,
@@ -136,11 +136,11 @@ if __name__ == "__main__":
         action="store_true",
         help="If set, keep the meshes in the normalized scale.",
     )
-    deep_sdf.add_common_args(arg_parser)
+    geon_nets.add_common_args(arg_parser)
 
     args = arg_parser.parse_args()
 
-    deep_sdf.configure_logging(args)
+    geon_nets.configure_logging(args)
 
     code_to_mesh(
         args.experiment_directory, args.checkpoint, args.keep_normalized

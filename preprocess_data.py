@@ -1,54 +1,28 @@
 #!/usr/bin/env python3
 # Copyright 2004-present Facebook. All Rights Reserved.
 
-import argparse
 import concurrent.futures
 import json
 import logging
-import os
+import multiprocessing as mp
 import subprocess
+import typing as t
+from collections import Counter
+from pathlib import Path
 
-import deep_sdf
-import deep_sdf.workspace as ws
+import tqdm
 
-
-def filter_classes_glob(patterns, classes):
-    import fnmatch
-
-    passed_classes = set()
-    for pattern in patterns:
-
-        passed_classes = passed_classes.union(
-            set(filter(lambda x: fnmatch.fnmatch(x, pattern), classes))
-        )
-
-    return list(passed_classes)
+import geon_nets
+import geon_nets.workspace as ws
+from common import cfg
 
 
-def filter_classes_regex(patterns, classes):
-    import re
-
-    passed_classes = set()
-    for pattern in patterns:
-        regex = re.compile(pattern)
-        passed_classes = passed_classes.union(
-            set(filter(regex.match, classes))
-        )
-
-    return list(passed_classes)
-
-
-def filter_classes(patterns, classes):
-    if patterns[0] == "glob":
-        return filter_classes_glob(patterns, classes[1:])
-    elif patterns[0] == "regex":
-        return filter_classes_regex(patterns, classes[1:])
-    else:
-        return filter_classes_glob(patterns, classes)
-
-
-def process_mesh(mesh_filepath, target_filepath, executable, additional_args):
-    logging.info(mesh_filepath + " --> " + target_filepath)
+def process_mesh(
+    mesh_filepath: str,
+    target_filepath: str,
+    executable: str,
+    additional_args: t.List[str],
+):
     command = [
         executable,
         "-m",
@@ -61,65 +35,29 @@ def process_mesh(mesh_filepath, target_filepath, executable, additional_args):
     subproc.wait()
 
 
-def append_data_source_map(data_dir, name, source):
-
-    data_source_map_filename = ws.get_data_source_map_filename(data_dir)
-
-    print("data sources stored to " + data_source_map_filename)
-
-    data_source_map = {}
-
-    if os.path.isfile(data_source_map_filename):
-        with open(data_source_map_filename, "r") as f:
-            data_source_map = json.load(f)
-
-    if name in data_source_map:
-        if not data_source_map[name] == os.path.abspath(source):
-            raise RuntimeError(
-                "Cannot add data with the same name and a different source."
-            )
-
-    else:
-        data_source_map[name] = os.path.abspath(source)
-
-        with open(data_source_map_filename, "w") as f:
-            json.dump(data_source_map, f, indent=2)
-
-
-if __name__ == "__main__":
+def main():
+    import argparse
 
     arg_parser = argparse.ArgumentParser(
         formatter_class=argparse.RawTextHelpFormatter,
-        description="Pre-processes data from a data source and append the results to "
-        + "a dataset.",
+        description="Pre-processes data from a data source and append "
+        "the results to a dataset.",
+    )
+    arg_parser.add_argument(
+        "--source_dir",
+        "-s",
+        dest="source_dir",
+        help="The directory which holds all raw data.",
+        default=cfg.DIR.DATASET,
+        type=Path,
     )
     arg_parser.add_argument(
         "--data_dir",
         "-d",
         dest="data_dir",
-        required=True,
         help="The directory which holds all preprocessed data.",
-    )
-    arg_parser.add_argument(
-        "--source",
-        "-s",
-        dest="source_dir",
-        required=True,
-        help="The directory which holds the data to preprocess and append.",
-    )
-    arg_parser.add_argument(
-        "--name",
-        "-n",
-        dest="source_name",
-        default=None,
-        help="The name to use for the data source. If unspecified, it defaults to the "
-        + "directory name.",
-    )
-    arg_parser.add_argument(
-        "--split",
-        dest="split_filename",
-        required=True,
-        help="A split filename defining the shapes to be processed.",
+        default=cfg.DIR.PREPROCESSED_DATASET,
+        type=Path,
     )
     arg_parser.add_argument(
         "--skip",
@@ -131,7 +69,7 @@ if __name__ == "__main__":
     arg_parser.add_argument(
         "--threads",
         dest="num_threads",
-        default=8,
+        default=mp.cpu_count(),
         help="The number of threads to use to process the data.",
     )
     arg_parser.add_argument(
@@ -140,144 +78,205 @@ if __name__ == "__main__":
         dest="test_sampling",
         default=False,
         action="store_true",
-        help="If set, the script will produce SDF samplies for testing",
+        help="If set, the script will produce SDF samples for testing",
     )
     arg_parser.add_argument(
         "--surface",
         dest="surface_sampling",
         default=False,
         action="store_true",
-        help="If set, the script will produce mesh surface samples for evaluation. "
-        + "Otherwise, the script will produce SDF samples for training.",
+        help="If set, the script will produce mesh surface samples for "
+        "evaluation. Otherwise, the script will produce SDF samples "
+        "for training.",
+    )
+    arg_parser.add_argument(
+        "--info",
+        "-i",
+        dest="dataset_info",
+        help="Path to file with the taxonomy derived in the work of Choy "
+        "et al.",
+        default=cfg.DATASET_DESCRIPTION,
     )
 
-    deep_sdf.add_common_args(arg_parser)
+    geon_nets.add_common_args(arg_parser)
 
     args = arg_parser.parse_args()
 
-    deep_sdf.configure_logging(args)
+    geon_nets.configure_logging(args)
 
     additional_general_args = []
-
-    deepsdf_dir = os.path.dirname(os.path.abspath(__file__))
+    geon_nets_dir = Path(__file__).absolute().parent
     if args.surface_sampling:
-        executable = os.path.join(deepsdf_dir, "bin/SampleVisibleMeshSurface")
+        executable = geon_nets_dir / "bin/SampleVisibleMeshSurface"
         subdir = ws.surface_samples_subdir
         extension = ".ply"
     else:
-        executable = os.path.join(deepsdf_dir, "bin/PreprocessMesh")
+        executable = geon_nets_dir / "bin/PreprocessMesh"
         subdir = ws.sdf_samples_subdir
         extension = ".npz"
 
         if args.test_sampling:
             additional_general_args += ["-t"]
 
-    with open(args.split_filename, "r") as f:
-        split = json.load(f)
-
-    if args.source_name is None:
-        args.source_name = os.path.basename(os.path.normpath(args.source_dir))
-
-    dest_dir = os.path.join(args.data_dir, subdir, args.source_name)
-
-    logging.info(
-        "Preprocessing data from "
-        + args.source_dir
-        + " and placing the results in "
-        + dest_dir
+    process_meshes(
+        args.source_dir,
+        args.data_dir,
+        args.dataset_info,
+        subdir,
+        executable,
+        args.skip,
+        args.surface_sampling,
+        extension,
+        args.num_threads,
+        additional_general_args,
     )
 
-    if not os.path.isdir(dest_dir):
-        os.makedirs(dest_dir)
 
-    if args.surface_sampling:
-        normalization_param_dir = os.path.join(
-            args.data_dir, ws.normalization_param_subdir, args.source_name
-        )
-        if not os.path.isdir(normalization_param_dir):
-            os.makedirs(normalization_param_dir)
+def process_meshes(
+    source_dir: Path,
+    data_dir: Path,
+    dataset_info_path: str,
+    target_subdir: str,
+    executable: str,
+    skip: bool,
+    surface_sampling: bool,
+    processed_file_extension: str,
+    num_threads: int,
+    additional_args: t.Sequence[str],
+):
+    dest_dir = data_dir / target_subdir
+    if not dest_dir.exists():
+        dest_dir.mkdir(exist_ok=True, parents=True)
 
-    append_data_source_map(args.data_dir, args.source_name, args.source_dir)
+    normalization_param_dir: t.Optional[Path] = None
+    if surface_sampling:
+        normalization_param_dir = data_dir / ws.normalization_param_subdir
+        if not normalization_param_dir.exists():
+            normalization_param_dir.mkdir()
 
-    class_directories = split[args.source_name]
+    mesh_targets_and_specific_args = []
+    logging.info(
+        "Preprocessing data and placing the results in " + dest_dir.as_posix()
+    )
 
-    meshes_targets_and_specific_args = []
+    with open(dataset_info_path) as f:
+        dataset_info = json.load(f)
 
-    for class_dir in class_directories:
-        class_path = os.path.join(args.source_dir, class_dir)
-        instance_dirs = class_directories[class_dir]
+    meshes_classes_to_process = list(dataset_info.keys())
 
+    not_existing_meshes = []
+    not_existing_renderings = []
+    total_instances = 0
+
+    for class_name in meshes_classes_to_process:
+        instances_folders = list((source_dir / class_name).glob("*"))
         logging.debug(
-            "Processing "
-            + str(len(instance_dirs))
-            + " instances of class "
-            + class_dir
+            f"Processing {class_name} with "
+            f"{len(instances_folders)} instances"
         )
 
-        target_dir = os.path.join(dest_dir, class_dir)
+        total_instances += len(instances_folders)
 
-        if not os.path.isdir(target_dir):
-            os.mkdir(target_dir)
-
-        for instance_dir in instance_dirs:
-
-            shape_dir = os.path.join(class_path, instance_dir)
-
-            processed_filepath = os.path.join(
-                target_dir, instance_dir + extension
+        for instance_folder in instances_folders:
+            output_shape_dir = dest_dir / class_name / instance_folder.name
+            output_shape_dir.mkdir(exist_ok=True, parents=True)
+            processed_file_path = (
+                output_shape_dir / f"samples{processed_file_extension}"
             )
-            if args.skip and os.path.isfile(processed_filepath):
-                logging.debug("skipping " + processed_filepath)
+            if skip and processed_file_path.is_file():
+                logging.debug(f"skipping {processed_file_path.as_posix()}")
                 continue
 
             try:
-                mesh_filename = deep_sdf.data.find_mesh_in_directory(shape_dir)
+                mesh_filename = (
+                    instance_folder / "models" / "model_normalized.obj"
+                )
+                if not mesh_filename.exists():
+                    not_existing_meshes.append(instance_folder.parent.name)
+                    continue
+
+                if not (instance_folder / "rendering").exists():
+                    not_existing_renderings.append(instance_folder.parent.name)
+                    continue
 
                 specific_args = []
 
-                if args.surface_sampling:
-                    normalization_param_target_dir = os.path.join(
-                        normalization_param_dir, class_dir
+                if surface_sampling and normalization_param_dir is not None:
+                    normalization_param_target_dir = (
+                        normalization_param_dir
+                        / class_name
+                        / instance_folder.name
                     )
-
-                    if not os.path.isdir(normalization_param_target_dir):
-                        os.mkdir(normalization_param_target_dir)
-
-                    normalization_param_filename = os.path.join(
-                        normalization_param_target_dir, instance_dir + ".npz"
+                    if not normalization_param_target_dir.exists():
+                        normalization_param_target_dir.mkdir(
+                            exist_ok=True, parents=True
+                        )
+                    normalization_param_file_name = (
+                        normalization_param_target_dir
+                        / "normalization_params.npz"
                     )
-                    specific_args = ["-n", normalization_param_filename]
+                    specific_args = [
+                        "-n",
+                        normalization_param_file_name.as_posix(),
+                    ]
 
-                meshes_targets_and_specific_args.append(
+                mesh_targets_and_specific_args.append(
                     (
-                        os.path.join(shape_dir, mesh_filename),
-                        processed_filepath,
+                        mesh_filename,
+                        processed_file_path.as_posix(),
                         specific_args,
                     )
                 )
 
-            except deep_sdf.data.NoMeshFileError:
-                logging.warning("No mesh found for instance " + instance_dir)
-            except deep_sdf.data.MultipleMeshFileError:
+            except geon_nets.data.NoMeshFileError:
                 logging.warning(
-                    "Multiple meshes found for instance " + instance_dir
+                    "No mesh found for instance "
+                    + (instance_folder.parent / instance_folder.name)
                 )
-
+            except geon_nets.data.MultipleMeshFileError:
+                logging.warning(
+                    "Multiple meshes found for instance "
+                    + (instance_folder.parent / instance_folder.name)
+                )
+    logging.info(
+        f"No shapes ratio: "
+        f"{len(not_existing_meshes) / total_instances:.4f}"
+    )
+    logging.info(
+        f"Non normalized and all shapes counts: "
+        f"{len(not_existing_meshes)}, {total_instances}"
+    )
+    logging.info(
+        f"Names of classes without shape: " f"{list(set(not_existing_meshes))}"
+    )
+    logging.info(
+        f"Counts of classes without shape: " f"{Counter(not_existing_meshes)}"
+    )
+    logging.info(
+        f"Names of classes without renderings: "
+        f"{list(set(not_existing_renderings))}"
+    )
+    logging.info(
+        f"Counts of classes without renderings: "
+        f"{Counter(not_existing_renderings)}"
+    )
     with concurrent.futures.ThreadPoolExecutor(
-        max_workers=int(args.num_threads)
+        max_workers=int(num_threads)
     ) as executor:
 
-        for (
-            mesh_filepath,
-            target_filepath,
-            specific_args,
-        ) in meshes_targets_and_specific_args:
+        for (mesh_filepath, target_filepath, specific_args,) in tqdm.tqdm(
+            mesh_targets_and_specific_args
+        ):
             executor.submit(
                 process_mesh,
                 mesh_filepath,
                 target_filepath,
                 executable,
-                specific_args + additional_general_args,
+                specific_args + additional_args,
             )
 
         executor.shutdown()
+
+
+if __name__ == "__main__":
+    main()

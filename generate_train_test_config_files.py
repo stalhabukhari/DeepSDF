@@ -108,6 +108,11 @@ def config_to_split_by_synset(
     return train_config, valid_config
 
 
+def dump_to_file(path: str, config: ConfigType) -> None:
+    with open(path, "w") as f:
+        json.dump(config, f, indent=4)
+
+
 def main():
     import argparse
 
@@ -135,19 +140,13 @@ def main():
 
     if args.split_by_object:
         splits = config_to_split_by_object_id(a_config)
-        with open(args.train_object_output, "w") as f:
-            json.dump(splits[0], f)
-
-        with open(args.valid_object_output, "w") as f:
-            json.dump(splits[1], f)
+        dump_to_file(args.train_object_output, splits[0])
+        dump_to_file(args.valid_object_output, splits[1])
 
     if args.split_by_synset:
         splits = config_to_split_by_synset(a_config)
-        with open(args.train_synset_output, "w") as f:
-            json.dump(splits[0], f)
-
-        with open(args.valid_synset_output, "w") as f:
-            json.dump(splits[1], f)
+        dump_to_file(args.train_synset_output, splits[0])
+        dump_to_file(args.valid_synset_output, splits[1])
 
 
 if __name__ == "__main__":

@@ -1,4 +1,5 @@
 import os
+import typing as t
 
 from easydict import EasyDict
 
@@ -6,6 +7,9 @@ cfg = EasyDict()
 
 cfg.DATASET_DESCRIPTION = os.path.join(
     "experiments", "dataset", "shapenet.json"
+)
+cfg.CLASS_MAPPING = os.path.join(
+    "experiments", "dataset", "class_mapping.json"
 )
 cfg.TRAIN_OBJECT_SPLIT_CONFIG = os.path.join(
     "experiments", "dataset", "train_object_split.json"
@@ -23,7 +27,11 @@ cfg.VALID_SYNSET_SPLIT_CONFIG = os.path.join(
 
 cfg.DIR = EasyDict()
 cfg.DIR.DATASET = os.path.join(
-    "/datasets", "users", "kkania", "shapenet", "ShapeNetCore.v2"
+    "/datasets", "users", "kkania", "shapenet", "raw"
+)
+
+cfg.DIR.PREPROCESSED_DATASET = os.path.join(
+    "/datasets", "users", "kkania", "shapenet", "preprocessed"
 )
 
 cfg.CONST = EasyDict()
@@ -34,3 +42,5 @@ cfg.CONST.BATCH_SIZE = 64
 
 cfg.CONST.TRAIN_VALID_OBJECTS_RATIO = 0.7
 cfg.CONST.TRAIN_VALID_SYNSETS_RATIO = 0.7
+
+ConfigType = t.Dict[str, t.Dict[str, t.Any]]

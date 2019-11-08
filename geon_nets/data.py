@@ -21,13 +21,17 @@ def get_instance_filenames(data_source, split):
                     dataset, class_name, instance_name + ".npz"
                 )
                 if not os.path.isfile(
-                    os.path.join(data_source, ws.sdf_samples_subdir, instance_filename)
+                    os.path.join(
+                        data_source, ws.sdf_samples_subdir, instance_filename
+                    )
                 ):
                     # raise RuntimeError(
                     #     'Requested non-existent file "' + instance_filename + "'"
                     # )
                     logging.warning(
-                        "Requested non-existent file '{}'".format(instance_filename)
+                        "Requested non-existent file '{}'".format(
+                            instance_filename
+                        )
                     )
                 npzfiles += [instance_filename]
     return npzfiles
@@ -144,7 +148,9 @@ class SDFSamples(torch.utils.data.Dataset):
         if load_ram:
             self.loaded_data = []
             for f in self.npyfiles:
-                filename = os.path.join(self.data_source, ws.sdf_samples_subdir, f)
+                filename = os.path.join(
+                    self.data_source, ws.sdf_samples_subdir, f
+                )
                 npz = np.load(filename)
                 pos_tensor = remove_nans(torch.from_numpy(npz["pos"]))
                 neg_tensor = remove_nans(torch.from_numpy(npz["neg"]))
@@ -164,7 +170,9 @@ class SDFSamples(torch.utils.data.Dataset):
         )
         if self.load_ram:
             return (
-                unpack_sdf_samples_from_ram(self.loaded_data[idx], self.subsample),
+                unpack_sdf_samples_from_ram(
+                    self.loaded_data[idx], self.subsample
+                ),
                 idx,
             )
         else:

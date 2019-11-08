@@ -12,7 +12,13 @@ import deep_sdf.utils
 
 
 def create_mesh(
-    decoder, latent_vec, filename, N=256, max_batch=32 ** 3, offset=None, scale=None
+    decoder,
+    latent_vec,
+    filename,
+    N=256,
+    max_batch=32 ** 3,
+    offset=None,
+    scale=None,
 ):
     start = time.time()
     ply_filename = filename
@@ -45,7 +51,9 @@ def create_mesh(
     head = 0
 
     while head < num_samples:
-        sample_subset = samples[head : min(head + max_batch, num_samples), 0:3].cuda()
+        sample_subset = samples[
+            head : min(head + max_batch, num_samples), 0:3
+        ].cuda()
 
         samples[head : min(head + max_batch, num_samples), 3] = (
             deep_sdf.utils.decode_sdf(decoder, latent_vec, sample_subset)
@@ -115,7 +123,9 @@ def convert_sdf_samples_to_ply(
     num_verts = verts.shape[0]
     num_faces = faces.shape[0]
 
-    verts_tuple = np.zeros((num_verts,), dtype=[("x", "f4"), ("y", "f4"), ("z", "f4")])
+    verts_tuple = np.zeros(
+        (num_verts,), dtype=[("x", "f4"), ("y", "f4"), ("z", "f4")]
+    )
 
     for i in range(0, num_verts):
         verts_tuple[i] = tuple(mesh_points[i, :])
@@ -123,7 +133,9 @@ def convert_sdf_samples_to_ply(
     faces_building = []
     for i in range(0, num_faces):
         faces_building.append(((faces[i, :].tolist(),)))
-    faces_tuple = np.array(faces_building, dtype=[("vertex_indices", "i4", (3,))])
+    faces_tuple = np.array(
+        faces_building, dtype=[("vertex_indices", "i4", (3,))]
+    )
 
     el_verts = plyfile.PlyElement.describe(verts_tuple, "vertex")
     el_faces = plyfile.PlyElement.describe(faces_tuple, "face")

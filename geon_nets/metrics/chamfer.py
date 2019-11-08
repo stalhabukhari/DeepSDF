@@ -6,7 +6,9 @@ from scipy.spatial import cKDTree as KDTree
 import trimesh
 
 
-def compute_trimesh_chamfer(gt_points, gen_mesh, offset, scale, num_mesh_samples=30000):
+def compute_trimesh_chamfer(
+    gt_points, gen_mesh, offset, scale, num_mesh_samples=30000
+):
     """
     This function computes a symmetric chamfer distance, i.e. the sum of both chamfers.
 
@@ -18,7 +20,9 @@ def compute_trimesh_chamfer(gt_points, gen_mesh, offset, scale, num_mesh_samples
 
     """
 
-    gen_points_sampled = trimesh.sample.sample_surface(gen_mesh, num_mesh_samples)[0]
+    gen_points_sampled = trimesh.sample.sample_surface(
+        gen_mesh, num_mesh_samples
+    )[0]
 
     gen_points_sampled = gen_points_sampled / scale - offset
 

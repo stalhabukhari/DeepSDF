@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 # Copyright 2004-present Facebook. All Rights Reserved.
 
+import argparse
 import logging
+
 import torch
 
 
-def add_common_args(arg_parser):
+def add_common_args(arg_parser: argparse.ArgumentParser):
     arg_parser.add_argument(
         "--debug",
         dest="debug",
@@ -29,7 +31,7 @@ def add_common_args(arg_parser):
     )
 
 
-def configure_logging(args):
+def configure_logging(args: argparse.Namespace):
     logger = logging.getLogger()
     if args.debug:
         logger.setLevel(logging.DEBUG)
@@ -38,7 +40,7 @@ def configure_logging(args):
     else:
         logger.setLevel(logging.INFO)
     logger_handler = logging.StreamHandler()
-    formatter = logging.Formatter("DeepSdf - %(levelname)s - %(message)s")
+    formatter = logging.Formatter("GeonNets - %(levelname)s - %(message)s")
     logger_handler.setFormatter(formatter)
     logger.addHandler(logger_handler)
 
@@ -48,7 +50,11 @@ def configure_logging(args):
         logger.addHandler(file_logger_handler)
 
 
-def decode_sdf(decoder, latent_vector, queries):
+def decode_sdf(
+    decoder: torch.nn.Module,
+    latent_vector: torch.Tensor,
+    queries: torch.Tensor,
+) -> torch.Tensor:
     num_samples = queries.shape[0]
 
     if latent_vector is None:

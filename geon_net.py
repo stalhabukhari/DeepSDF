@@ -174,12 +174,17 @@ class Decoder(DenseNetwork):
         self.biases_to_predict = SubNetwork.get_required_biases_count_from_config(
             subnetwork_config
         )
+        self.transform_parameter_count = 12
+        self.scale_parameter = 1
 
         self.param_prediction_layers = nn.ModuleList(
             [
                 nn.Linear(
                     self.hidden_layers_sizes[-1],
-                    self.weights_to_predict + self.biases_to_predict,
+                    self.weights_to_predict
+                    + self.biases_to_predict
+                    + self.transform_parameter_count
+                    + self.scale_parameter,
                 )
                 for _ in range(number_of_geons)
             ]
@@ -218,19 +223,50 @@ class Decoder(DenseNetwork):
 
         latent_codes = latent_codes.repeat((len(point_coordinates), 1))
         points_features = torch.cat((point_coordinates, latent_codes), axis=-1)
+        transform_augmenting_vector = torch.FloatTensor(
+            [0, 0, 0, 1], device=points_features.device,
+        ).unsqueeze(-1)
+        points_augmenting_vector = torch.FloatTensor(
+            [0] * (len(points_features) - 1) + [1], device=latent_codes.device,
+        ).unsqueeze(-1)
+        augmented_points = torch.cat(
+            (point_coordinates, points_augmenting_vector), dim=-1
+        )
 
         geons_outputs = []
         for i, param_prediction_layer in enumerate(
             self.param_prediction_layers
         ):
             params = param_prediction_layer(x)
-            weights, biases = (
-                params[0, : self.weights_to_predict],
-                params[0, self.weights_to_predict :],
+            nn_params, transform_params = (
+                params[0, : self.weights_to_predict + self.biases_to_predict],
+                params[0, self.weights_to_predict + self.biases_to_predict :],
             )
+            weights, biases = (
+                nn_params[: self.weights_to_predict],
+                nn_params[self.weights_to_predict :],
+            )
+
+            scaling = transform_params[-1]
+            transform_matrix = transform_params[:-1].reshape((4, 3))
+            transform_matrix = torch.cat(
+                (transform_matrix, transform_augmenting_vector), dim=-1
+            )
+
             geon: SubNetwork = self.geon_nets[i]
             geon.load_params_from_vectors(weights, biases)
-            geons_outputs.append(geon(points_features))
+
+            local_points_features = augmented_points.mm(
+                torch.inverse(transform_matrix + 1e-6)
+            )[:, :-1]
+            local_points_features = torch.cat(
+                (local_points_features, latent_codes), dim=-1
+            )
+
+            # https://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm
+            geons_outputs.append(
+                geon(local_points_features / scaling) * scaling
+            )
         geons = torch.cat(geons_outputs, dim=0)
         return geons
 

@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 # Copyright 2004-present Facebook. All Rights Reserved.
 
-import torch
-import torch.utils.data as data_utils
-import signal
-import sys
-import os
+import json
 import logging
 import math
-import json
+import os
+import signal
+import sys
 import time
+
+import torch
+import torch.utils.data as data_utils
 
 import geon_nets
 import geon_nets.workspace as ws

@@ -2,10 +2,11 @@
 # Copyright 2004-present Facebook. All Rights Reserved.
 
 import ctypes
-import geon_nets.data
 import sys
 
 import OpenGL.GL as gl
+
+import geon_nets.data
 import pypangolin as pango
 
 if __name__ == "__main__":

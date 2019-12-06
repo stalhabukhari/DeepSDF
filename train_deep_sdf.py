@@ -264,7 +264,7 @@ def main_function(experiment_directory, continue_from, batch_split):
 
     specs = ws.load_experiment_specifications(experiment_directory)
 
-    logging.info("Experiment description: \n" + specs["Description"])
+    logging.info("Experiment description: \n" + specs["Description"][0])
 
     data_source = specs["DataSource"]
     train_split_file = specs["TrainSplit"]
@@ -402,7 +402,7 @@ def main_function(experiment_directory, continue_from, batch_split):
         )
     )
 
-    loss_l1 = torch.nn.L1Loss(reduction="sum")
+    loss_l1 = torch.nn.L1Loss(reduction="sum").cuda()
 
     optimizer_all = torch.optim.Adam(
         [

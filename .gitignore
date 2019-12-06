@@ -374,3 +374,5 @@ bin/
 
 .vscode
 .pylintrc
+
+notes.md

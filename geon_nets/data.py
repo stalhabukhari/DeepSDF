@@ -3,9 +3,10 @@
 
 import glob
 import logging
-import numpy as np
 import os
 import random
+
+import numpy as np
 import torch
 import torch.utils.data
 
@@ -18,21 +19,19 @@ def get_instance_filenames(data_source, split):
         for class_name in split[dataset]:
             for instance_name in split[dataset][class_name]:
                 instance_filename = os.path.join(
-                    dataset, class_name, instance_name + ".npz"
+                    dataset, class_name, instance_name, "samples.npz"
                 )
                 if not os.path.isfile(
                     os.path.join(
                         data_source, ws.sdf_samples_subdir, instance_filename
                     )
                 ):
-                    # raise RuntimeError(
-                    #     'Requested non-existent file "' + instance_filename + "'"
-                    # )
                     logging.warning(
                         "Requested non-existent file '{}'".format(
                             instance_filename
                         )
                     )
+                    continue
                 npzfiles += [instance_filename]
     return npzfiles
 
@@ -40,13 +39,9 @@ def get_instance_filenames(data_source, split):
 class NoMeshFileError(RuntimeError):
     """Raised when a mesh file is not found in a shape directory"""
 
-    pass
-
 
 class MultipleMeshFileError(RuntimeError):
     """"Raised when a there a multiple mesh files in a shape directory"""
-
-    pass
 
 
 def find_mesh_in_directory(shape_dir):

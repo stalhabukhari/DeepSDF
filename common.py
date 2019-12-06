@@ -1,7 +1,8 @@
+from easydict import EasyDict
+
+import logging
 import os
 import typing as t
-
-from easydict import EasyDict
 
 cfg = EasyDict()
 
@@ -43,4 +44,28 @@ cfg.CONST.BATCH_SIZE = 64
 cfg.CONST.TRAIN_VALID_OBJECTS_RATIO = 0.7
 cfg.CONST.TRAIN_VALID_SYNSETS_RATIO = 0.7
 
+cfg.CONST.ENCODER_FILE_BASE_NAME = "encoder"
+cfg.CONST.DECODER_FILE_BASE_NAME = "decoder"
+cfg.CONST.OPTIMIZER_FILE_BASE_NAME = "optimizer"
+cfg.CONST.HISTORY_FILE_BASE_NAME = "optimizer"
+
 ConfigType = t.Dict[str, t.Dict[str, t.Any]]
+
+logging.basicConfig(level=logging.DEBUG)
+
+
+def get_logger(name: str) -> logging.Logger:
+    logger = logging.getLogger(name)
+    formatter = logging.Formatter(
+        fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+
+    handler = logging.FileHandler("logs/log.log", mode="a")
+    handler.setFormatter(formatter)
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(formatter)
+
+    logger.addHandler(handler)
+    logger.addHandler(stream_handler)
+
+    return logger

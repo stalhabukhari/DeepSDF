@@ -52,7 +52,9 @@ class Decoder(nn.Module):
                     nn.utils.weight_norm(nn.Linear(dims[layer], out_dim)),
                 )
             else:
-                setattr(self, "lin" + str(layer), nn.Linear(dims[layer], out_dim))
+                setattr(
+                    self, "lin" + str(layer), nn.Linear(dims[layer], out_dim)
+                )
 
             if (
                 (not weight_norm)
@@ -101,7 +103,9 @@ class Decoder(nn.Module):
                     x = bn(x)
                 x = self.relu(x)
                 if self.dropout is not None and layer in self.dropout:
-                    x = F.dropout(x, p=self.dropout_prob, training=self.training)
+                    x = F.dropout(
+                        x, p=self.dropout_prob, training=self.training
+                    )
 
         if hasattr(self, "th"):
             x = self.th(x)

@@ -184,7 +184,7 @@ class Trainer:
             current_epoch = 0
 
         for _ in range(epochs):
-            self.logger.info("Epoch %d / %d", current_epoch, epochs)
+            self.logger.info("Epoch %d / %d", current_epoch + 1, epochs)
 
             batch_history = defaultdict(list)
             pbar = tqdm.tqdm(total=len(train_loader))

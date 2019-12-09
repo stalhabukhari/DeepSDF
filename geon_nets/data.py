@@ -17,7 +17,7 @@ import tqdm
 from functional import seq
 
 import geon_nets.workspace as ws
-from common import cfg
+from common import cfg, get_logger
 
 
 def get_instance_filenames(data_source, split):
@@ -190,11 +190,14 @@ class ImageToSDFDataset(torch.utils.data.Dataset):
         verbose: bool = True,
         is_test: bool = False,
     ):
+        self.logger = get_logger(self.__class__.__name__)
+
         self.split_file = split_file
         self.subsample = subsample
         self.class_mapping = json.loads(Path(class_mapping).read_text())
         self.split = json.loads(Path(split_file).read_text())
         self.samples = self._preprocess_split()
+        self._filter_out_not_existing_samples()
         self.verbose = verbose
         self.is_test = is_test
 
@@ -237,6 +240,16 @@ class ImageToSDFDataset(torch.utils.data.Dataset):
                     .to_list()
                 )
         return samples
+
+    def _filter_out_not_existing_samples(self):
+        before = len(self.samples)
+        self.samples = (
+            seq(self.samples)
+            .filter(lambda a_tuple: os.path.exists(a_tuple[1]))
+            .to_list()
+        )
+        after = len(self.samples)
+        self.logger.info("Filtered out: %d", before - after)
 
 
 if __name__ == "__main__":

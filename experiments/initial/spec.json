@@ -8,7 +8,7 @@
     "train_split_file": "configs/dataset/train_object_split.json",
     "valid_split_file": "configs/dataset/valid_object_split.json",
     "subsample": 1024,
-    "batch_size": 64,
+    "batch_size": 1,
     "epochs": 32,
     "save_dir": "experiments/initial/results",
     "grad_clip": true

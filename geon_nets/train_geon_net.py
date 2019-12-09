@@ -308,7 +308,7 @@ def train(config_spec_path: str) -> None:
     valid_dataset = ImageToSDFDataset(
         spec["valid_split_file"],
         cfg.CLASS_TO_INDEX_MAPPING,
-        os.path.join(),
+        spec["subsample"],
         verbose=True,
         is_test=True,
     )

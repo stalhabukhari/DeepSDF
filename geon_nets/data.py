@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
 # Copyright 2004-present Facebook. All Rights Reserved.
 
-from pathlib import Path
-from functional import seq
-
-import geon_nets.workspace as ws
-import tqdm
-import cv2
 import glob
 import json
 import logging
-import numpy as np
 import os
 import random
+import typing as t
+from pathlib import Path
+
+import cv2
+import numpy as np
 import torch
 import torch.utils.data
-import typing as t
+import tqdm
+from functional import seq
+
+import geon_nets.workspace as ws
+from common import cfg
 
 
 def get_instance_filenames(data_source, split):

@@ -81,11 +81,13 @@ class Trainer:
     def save_model(
         self, directory: str, epoch: t.Optional[int] = None
     ) -> None:
+        self._ensure_dir(directory)
         self._save_file_content(
             os.path.join(directory, cfg.CONST.ENCODER_FILE_BASE_NAME),
             self.encoder.state_dict(),
             epoch,
         )
+        self._ensure_dir(directory)
         self._save_file_content(
             os.path.join(directory, cfg.CONST.DECODER_FILE_BASE_NAME),
             self.decoder.state_dict(),
@@ -95,6 +97,7 @@ class Trainer:
     def save_optimizer(
         self, directory: str, epoch: t.Optional[int] = None
     ) -> None:
+        self._ensure_dir(directory)
         self._save_file_content(
             os.path.join(directory, cfg.CONST.OPTIMIZER_FILE_BASE_NAME),
             self.optimizer.state_dict(),
@@ -104,11 +107,16 @@ class Trainer:
     def save_history(
         self, directory: str, epoch: t.Optional[int] = None
     ) -> None:
+        self._ensure_dir(directory)
         self._save_file_content(
             os.path.join(directory, cfg.CONST.HISTORY_FILE_BASE_NAME),
             self.history,
             epoch,
         )
+
+    def _ensure_dir(self, directory: str):
+        if not os.path.exists(directory):
+            os.makedirs(directory)
 
     def load_model(self, encoder_file: str, decoder_file: str) -> None:
         self.encoder.load_state_dict(torch.load(encoder_file))
@@ -148,16 +156,28 @@ class Trainer:
         )
         self.history = defaultdict(list)
 
-        if starting_epoch < 0:
+        if starting_epoch > 0:
             self.load_model(
-                (save_dir / cfg.CONST.ENCODER_FILE_BASE_NAME).as_posix(),
-                (save_dir / cfg.CONST.DECODER_FILE_BASE_NAME).as_posix(),
+                (
+                    save_dir
+                    / f"{cfg.CONST.ENCODER_FILE_BASE_NAME}_{starting_epoch}.pkl"
+                ).as_posix(),
+                (
+                    save_dir
+                    / f"{cfg.CONST.DECODER_FILE_BASE_NAME}_{starting_epoch}.pkl"
+                ).as_posix(),
             )
             self.load_optimizer(
-                (save_dir / cfg.CONST.OPTIMIZER_FILE_BASE_NAME).as_posix()
+                (
+                    save_dir
+                    / f"{cfg.CONST.OPTIMIZER_FILE_BASE_NAME}_{starting_epoch}.pkl"
+                ).as_posix()
             )
             self.load_history(
-                (save_dir / cfg.CONST.HISTORY_FILE_BASE_NAME).as_posix()
+                (
+                    save_dir
+                    / f"{cfg.CONST.HISTORY_FILE_BASE_NAME}_{starting_epoch}.pkl"
+                ).as_posix()
             )
             current_epoch = starting_epoch + 1
         else:
@@ -313,16 +333,12 @@ def train(config_spec_path: str) -> None:
         is_test=True,
     )
 
-    save_dir = spec["save_dir"]
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-
     trainer.fit(
         train_dataset,
         valid_dataset,
         spec["batch_size"],
         spec["epochs"],
-        save_dir,
+        spec["save_dir"],
         spec["grad_clip"],
     )
 

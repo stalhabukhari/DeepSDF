@@ -105,7 +105,7 @@ def main():
     geon_nets.configure_logging(args)
 
     additional_general_args = []
-    geon_nets_dir = Path(__file__).absolute().parent
+    geon_nets_dir = Path(__file__).absolute().parent.parent
     if args.surface_sampling:
         executable = geon_nets_dir / "bin/SampleVisibleMeshSurface"
         subdir = ws.surface_samples_subdir

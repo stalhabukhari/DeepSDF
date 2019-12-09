@@ -1,12 +1,14 @@
+import argparse
+import json
 import logging
 import multiprocessing as mp
-import numpy as np
 import os
 import typing as t
 from collections import OrderedDict, defaultdict
 from itertools import chain
 from pathlib import Path
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -14,6 +16,7 @@ import tqdm
 from torch.utils.data import DataLoader, Dataset
 
 from common import cfg, get_logger
+from geon_nets.data import ImageToSDFDataset
 from geon_nets.losses import DecompositionLoss
 from networks.geon_net import Decoder, Encoder
 
@@ -166,7 +169,7 @@ class Trainer:
             batch_history = defaultdict(list)
             pbar = tqdm.tqdm(total=len(train_loader))
             self.train()
-            for images, points_coordinates, distances in train_loader:
+            for images, points_coordinates, distances, _ in train_loader:
                 self.optimizer.zero_grad()
 
                 images, points_coordinates, distances = self.to_cuda(
@@ -236,7 +239,7 @@ class Trainer:
         history = defaultdict(list)
         self.eval()
 
-        for images, points_coordinates, distances in loader:
+        for images, points_coordinates, distances, _ in loader:
             images, points_coordinates, distances = self.to_cuda(
                 images, points_coordinates, distances
             )
@@ -271,3 +274,69 @@ class Trainer:
     def eval(self):
         self.encoder = self.encoder.eval()
         self.decoder = self.decoder.eval()
+
+
+def train(config_spec_path: str) -> None:
+    spec = json.loads(Path(config_spec_path).read_text())
+    trainer = Trainer(torch.cuda.is_available())
+
+    if spec["optimizer"] == "adam":
+        optimizer = lambda params: optim.Adam(params, lr=0.0005)
+    else:
+        optimizer = lambda params: optim.SGD(
+            params, lr=0.05, momentum=0.9, nesterov=True
+        )
+
+    trainer.initialize_model(
+        cfg.CONST.IMG_H,
+        spec["encoder_hidden_sizes"],
+        spec["decoder_hidden_sizes"],
+        spec["latent_size"],
+        spec["number_of_geons"],
+        spec["subnet_sizes"],
+        optimizer,
+    )
+
+    train_dataset = ImageToSDFDataset(
+        spec["train_split_file"],
+        cfg.CLASS_TO_INDEX_MAPPING,
+        spec["subsample"],
+        verbose=True,
+        is_test=False,
+    )
+
+    valid_dataset = ImageToSDFDataset(
+        spec["valid_split_file"],
+        cfg.CLASS_TO_INDEX_MAPPING,
+        os.path.join(),
+        verbose=True,
+        is_test=True,
+    )
+
+    save_dir = spec["save_dir"]
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    trainer.fit(
+        train_dataset,
+        valid_dataset,
+        spec["batch_size"],
+        spec["epochs"],
+        save_dir,
+        spec["grad_clip"],
+    )
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "config_spec", type=str, help="Path to the experiment specification"
+    )
+
+    args = parser.parse_args()
+
+    train(args.config_spec)
+
+
+if __name__ == "__main__":
+    main()

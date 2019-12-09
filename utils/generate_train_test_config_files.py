@@ -4,7 +4,7 @@ https://arxiv.org/pdf/1604.00449.pdf
 """
 import json
 import typing as t
-from collections import defaultdict, Counter
+from collections import Counter, defaultdict
 from pathlib import Path
 
 import numpy as np
@@ -14,22 +14,27 @@ from common import ConfigType, cfg
 
 
 def generate_config_and_name_mapping(
-    input_directory: str, dataset_description_path: str
-) -> t.Tuple[ConfigType, t.Dict[str, str]]:
+    input_directory: str,
+    dataset_description_path: str,
+    processed_data_dir: str,
+) -> t.Tuple[ConfigType, t.Dict[str, str], t.Dict[str, int]]:
     with open(dataset_description_path) as f:
         description = json.load(f)
 
     description = list(description.values())
 
     input_directory = Path(input_directory)
+    processed_data_dir = Path(processed_data_dir)
+
     output_config = {}
-    name_mapping = {}
+    name_to_string_mapping = {}
+    name_to_index_mapping = {}
 
     non_normalized_count = 0
     all_shapes_count = 0
     non_normalized_shape_names = []
 
-    for synset in description:
+    for idx, synset in enumerate(description):
         an_id = synset["id"]
         class_name = synset["name"]
         partial_config = defaultdict(dict)
@@ -66,8 +71,24 @@ def generate_config_and_name_mapping(
                 "model_path"
             ] = normalized_model_path.as_posix()
 
+            partial_config[an_object_folder.name]["sdf_samples"] = (
+                processed_data_dir
+                / "SdfSamples"
+                / an_id
+                / an_object_folder.name
+                / "samples.npz"
+            ).as_posix()
+            partial_config[an_object_folder.name]["surface_samples"] = (
+                processed_data_dir
+                / "SurfaceSamples"
+                / an_id
+                / an_object_folder.name
+                / "samples.ply"
+            ).as_posix()
+
         output_config[an_id] = partial_config
-        name_mapping[an_id] = class_name
+        name_to_string_mapping[an_id] = class_name
+        name_to_index_mapping[an_id] = idx
 
     print(
         f"Non normalized to all shapes ratio: "
@@ -85,7 +106,7 @@ def generate_config_and_name_mapping(
         f"Names of non normalized counts: "
         f"{Counter(non_normalized_shape_names)}"
     )
-    return output_config, name_mapping
+    return output_config, name_to_string_mapping, name_to_index_mapping
 
 
 def config_to_split_by_object_id(
@@ -156,6 +177,9 @@ def main():
     parser.add_argument("-i", "--input_directory", default=cfg.DIR.DATASET)
     parser.add_argument("-c", "--config_path", default=cfg.DATASET_DESCRIPTION)
     parser.add_argument(
+        "-p", "--processed_data_folder", default=cfg.DIR.PREPROCESSED_DATASET
+    )
+    parser.add_argument(
         "--train_object_output", default=cfg.TRAIN_OBJECT_SPLIT_CONFIG
     )
     parser.add_argument(
@@ -172,11 +196,16 @@ def main():
 
     args = parser.parse_args()
 
-    a_config, class_mapping = generate_config_and_name_mapping(
-        args.input_directory, args.config_path
+    (
+        a_config,
+        class_to_name_mapping,
+        class_to_index_mapping,
+    ) = generate_config_and_name_mapping(
+        args.input_directory, args.config_path, args.processed_data_folder
     )
 
-    dump_to_file(cfg.CLASS_MAPPING, class_mapping)
+    dump_to_file(cfg.CLASS_MAPPING, class_to_name_mapping)
+    dump_to_file(cfg.CLASS_TO_INDEX_MAPPING, class_to_index_mapping)
 
     if args.split_by_object:
         splits = config_to_split_by_object_id(a_config)

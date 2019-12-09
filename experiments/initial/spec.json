@@ -1,0 +1,15 @@
+{
+    "optimizer": "adam",
+    "encoder_hidden_sizes": [1024, 512, 256],
+    "decoder_hidden_sizes": [256, 256, 256],
+    "latent_size": 128,
+    "number_of_geons": 5,
+    "subnet_sizes": [32, 16],
+    "train_split_file": "configs/dataset/train_object_split.json",
+    "valid_split_file": "configs/dataset/valid_object_split.json",
+    "subsample": 1024,
+    "batch_size": 64,
+    "epochs": 32,
+    "save_dir": "experiments/initial/results",
+    "grad_clip": true
+}

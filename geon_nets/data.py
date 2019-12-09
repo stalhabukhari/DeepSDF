@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
 # Copyright 2004-present Facebook. All Rights Reserved.
 
-import glob
-import logging
-import os
-import random
-
-import numpy as np
-import torch
-import torch.utils.data
+from pathlib import Path
+from functional import seq
 
 import geon_nets.workspace as ws
+import tqdm
+import cv2
+import glob
+import json
+import logging
+import numpy as np
+import os
+import random
+import torch
+import torch.utils.data
+import typing as t
 
 
 def get_instance_filenames(data_source, split):
@@ -172,3 +177,70 @@ class SDFSamples(torch.utils.data.Dataset):
             )
         else:
             return unpack_sdf_samples(filename, self.subsample), idx
+
+
+class ImageToSDFDataset(torch.utils.data.Dataset):
+    def __init__(
+        self,
+        split_file: str,
+        class_mapping: str,
+        subsample: t.Optional[int] = 1_024,
+        verbose: bool = True,
+        is_test: bool = False,
+    ):
+        self.split_file = split_file
+        self.subsample = subsample
+        self.class_mapping = json.loads(Path(class_mapping).read_text())
+        self.split = json.loads(Path(split_file).read_text())
+        self.samples = self._preprocess_split()
+        self.verbose = verbose
+        self.is_test = is_test
+
+    def __len__(self) -> int:
+        return len(self.samples)
+
+    def __getitem__(self, idx: int) -> t.Tuple[torch.Tensor, ...]:
+        (img_path, sdf_samples_path, _, class_name) = self.samples[idx]
+
+        img = cv2.imread(img_path)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = cv2.resize(img, (cfg.CONST.IMG_W, cfg.CONST.IMG_H))
+
+        img = torch.from_numpy(img).float() / 255.0
+        sdf_samples = unpack_sdf_samples(
+            sdf_samples_path, subsample=self.subsample
+        )
+
+        class_num = torch.IntTensor([self.class_mapping[class_name]])
+        coordinates = sdf_samples[:, -1]
+        sdfs = sdf_samples[:, -1:]
+
+        return img, coordinates, sdfs, class_num
+
+    def _preprocess_split(self) -> t.List[t.Tuple]:
+        samples = []
+        for a_class, objects in tqdm.tqdm(self.split.items()):
+            for _, paths in objects.items():
+                renders = paths["renders"]
+                sdf_samples = paths["sdf_samples"]
+                surface_samples = paths["surface_samples"]
+
+                samples.extend(
+                    seq(renders)
+                    .map(
+                        lambda a_path: tuple(
+                            (a_path, sdf_samples, surface_samples, a_class)
+                        )
+                    )
+                    .to_list()
+                )
+        return samples
+
+
+if __name__ == "__main__":
+    from common import cfg
+
+    dataset = ImageToSDFDataset(
+        cfg.TRAIN_OBJECT_SPLIT_CONFIG, cfg.CLASS_TO_INDEX_MAPPING, 1_024
+    )
+    dataset[0]

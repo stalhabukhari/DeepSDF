@@ -1,6 +1,5 @@
 {
     "optimizer": "adam",
-    "encoder_hidden_sizes": [1024, 512, 256],
     "decoder_hidden_sizes": [256, 256, 256],
     "latent_size": 128,
     "number_of_geons": 5,

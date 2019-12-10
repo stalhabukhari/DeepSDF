@@ -217,9 +217,10 @@ class ImageToSDFDataset(torch.utils.data.Dataset):
         )
 
         class_num = torch.IntTensor([self.class_mapping[class_name]])
-        coordinates = sdf_samples[:, -1]
+        coordinates = sdf_samples[:, :-1]
         sdfs = sdf_samples[:, -1:]
 
+        img = img.permute(2, 0, 1)
         return img, coordinates, sdfs, class_num
 
     def _preprocess_split(self) -> t.List[t.Tuple]:

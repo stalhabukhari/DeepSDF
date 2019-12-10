@@ -1,5 +1,6 @@
 import abc
 import typing as t
+import torchvision
 
 import numpy as np
 import torch
@@ -128,32 +129,39 @@ class SubNetwork(DenseNetwork):
         return net
 
 
-class Encoder(DenseNetwork):
-    def __init__(
-        self,
-        input_features: int,
-        hidden_layers_sizes: t.List[int],
-        latent_size: int,
-        dropout: float = 0.0,
-    ):
-        super().__init__(input_features, hidden_layers_sizes, dropout)
+class Encoder(nn.Module):
+    def __init__(self, latent_size: int):
+        super().__init__()
+        self.encoder_part = torchvision.models.resnet18(pretrained=True)
         self.latent_size = latent_size
 
         self.mu_encoder = nn.Linear(
-            self.hidden_layers_sizes[-1], self.latent_size
+            self.encoder_part.fc.in_features, self.latent_size
         )
         self.sigma_encoder = nn.Linear(
-            self.hidden_layers_sizes[-1], self.latent_size
+            self.encoder_part.fc.in_features, self.latent_size
         )
 
     def forward(self, x: torch.Tensor) -> t.Tuple[torch.Tensor, torch.Tensor]:
-        for layer in self.layers:
-            x = layer(x)
-            if self.dropout >= 0.0:
-                x = torch.dropout(x, p=self.dropout, train=self.training)
-            x = torch.relu(x)
+        encoded = self.encoding_foward(x)
+        encoded = torch.relu(encoded)
 
-        return self.mu_encoder(x), self.sigma_encoder(x)
+        return self.mu_encoder(encoded), self.sigma_encoder(encoded)
+
+    def encoding_foward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.encoder_part.conv1(x)
+        x = self.encoder_part.bn1(x)
+        x = self.encoder_part.relu(x)
+        x = self.encoder_part.maxpool(x)
+
+        x = self.encoder_part.layer1(x)
+        x = self.encoder_part.layer2(x)
+        x = self.encoder_part.layer3(x)
+        x = self.encoder_part.layer4(x)
+
+        x = self.encoder_part.avgpool(x)
+        x = torch.flatten(x, 1)
+        return x
 
 
 class Decoder(DenseNetwork):
@@ -222,13 +230,17 @@ class Decoder(DenseNetwork):
             x = torch.relu(x)
 
         latent_codes = latent_codes.repeat((len(point_coordinates), 1))
-        points_features = torch.cat((point_coordinates, latent_codes), axis=-1)
-        transform_augmenting_vector = torch.FloatTensor(
-            [0, 0, 0, 1], device=points_features.device,
+        points_features = torch.cat((point_coordinates, latent_codes), dim=-1)
+        transform_augmenting_vector = torch.tensor(
+            [0, 0, 0, 1], device=points_features.device, dtype=torch.float32
         ).unsqueeze(-1)
-        points_augmenting_vector = torch.FloatTensor(
-            [0] * (len(points_features) - 1) + [1], device=latent_codes.device,
+
+        points_augmenting_vector = torch.tensor(
+            [0] * (len(points_features) - 1) + [1],
+            device=latent_codes.device,
+            dtype=torch.float32,
         ).unsqueeze(-1)
+
         augmented_points = torch.cat(
             (point_coordinates, points_augmenting_vector), dim=-1
         )
@@ -277,6 +289,8 @@ class Decoder(DenseNetwork):
         point_coordinates: torch.Tensor,
     ) -> t.List[torch.Tensor]:
         assert mu.shape[0] == 1
+        if point_coordinates.shape[0] == 1:
+            point_coordinates = point_coordinates.squeeze(dim=0)
         x = self.reparametrize(mu, sigma)
         return self.generate_samples(x, point_coordinates)
 

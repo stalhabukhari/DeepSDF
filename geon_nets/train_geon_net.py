@@ -37,8 +37,6 @@ class Trainer:
 
     def initialize_model(
         self,
-        image_size: int,
-        encoder_hidden_sizes: t.List[int],
         decoder_hidden_sizes: t.List[int],
         latent_size: int,
         number_of_geons: int,
@@ -46,9 +44,7 @@ class Trainer:
         optimizer: t.Callable[[t.Iterable[nn.Parameter]], optim.Optimizer],
         dropout: float = 0.0,
     ):
-        self.encoder = Encoder(
-            image_size, encoder_hidden_sizes, latent_size, dropout
-        )
+        self.encoder = Encoder(latent_size)
         self.decoder = Decoder(
             latent_size,
             decoder_hidden_sizes,
@@ -201,7 +197,9 @@ class Trainer:
                     latent_means, latent_stds, points_coordinates
                 )
 
-                l1_value = self.l1_loss(pred_sdf.max(dim=0), distances)
+                l1_value = self.l1_loss(
+                    pred_sdf.max(dim=0, keepdim=True)[0], distances
+                )
                 decomp_value = self.decomposition_loss(pred_sdf)
 
                 total_loss = l1_value + decomp_value
@@ -308,8 +306,6 @@ def train(config_spec_path: str) -> None:
         )
 
     trainer.initialize_model(
-        cfg.CONST.IMG_H,
-        spec["encoder_hidden_sizes"],
         spec["decoder_hidden_sizes"],
         spec["latent_size"],
         spec["number_of_geons"],

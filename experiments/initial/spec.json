@@ -10,5 +10,7 @@
     "batch_size": 1,
     "epochs": 32,
     "save_dir": "experiments/initial/results",
-    "grad_clip": true
+    "grad_clip": true,
+    "decomposition_threshold": 0,
+    "guidance_top_nearest_points": 128
 }

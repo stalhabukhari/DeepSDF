@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader, Dataset
 
 from common import cfg, get_logger
 from geon_nets.data import ImageToSDFDataset
-from geon_nets.losses import DecompositionLoss
+from geon_nets import losses
 from networks.geon_net import Decoder, Encoder
 
 
@@ -26,8 +26,9 @@ class Trainer:
         self.encoder: t.Optional[Encoder] = None
         self.decoder: t.Optional[Decoder] = None
 
-        self.l1_loss: t.Optional[nn.L1Loss] = None
-        self.decomposition_loss: t.Optional[DecompositionLoss] = None
+        self.main_loss: t.Optional[losses.PenalizingL1] = None
+        self.decomposition_loss: t.Optional[losses.DecompositionLoss] = None
+        self.guidance_loss: t.Optional[losses.GuidanceLoss] = None
 
         self.optimizer: t.Optional[optim.Optimizer] = None
         self.history = defaultdict(list)
@@ -42,6 +43,8 @@ class Trainer:
         number_of_geons: int,
         subnet_config: t.List[int],
         optimizer: t.Callable[[t.Iterable[nn.Parameter]], optim.Optimizer],
+        decomposition_threshold: float,
+        guidance_top_nearest_points: int,
         dropout: float = 0.0,
     ):
         self.encoder = Encoder(latent_size)
@@ -57,14 +60,18 @@ class Trainer:
             chain(self.encoder.parameters(), self.decoder.parameters())
         )
 
-        self.l1_loss = torch.nn.L1Loss(reduction="sum")
-        self.decomposition_loss = DecompositionLoss()
+        self.main_loss = losses.PenalizingL1(reduction="sum")
+        self.decomposition_loss = losses.DecompositionLoss(
+            threshold=decomposition_threshold
+        )
+        self.guidance_loss = losses.GuidanceLoss(guidance_top_nearest_points)
 
         if self.cuda:
             self.encoder.cuda()
             self.decoder.cuda()
-            self.l1_loss.cuda()
+            self.main_loss.cuda()
             self.decomposition_loss.cuda()
+            self.guidance_loss.cuda()
 
     def _save_file_content(
         self, file_template: str, content: t.Any, epoch: t.Optional[int] = None
@@ -193,16 +200,19 @@ class Trainer:
                 )
 
                 latent_means, latent_stds = self.encoder(images)
-                pred_sdf = self.decoder(
+                pred_sdf, transformation_matrices = self.decoder(
                     latent_means, latent_stds, points_coordinates
                 )
 
-                l1_value = self.l1_loss(
+                main_loss_value = self.main_loss(
                     pred_sdf.max(dim=0, keepdim=True)[0], distances
                 )
                 decomp_value = self.decomposition_loss(pred_sdf)
+                guidance_value = self.guidance_loss(
+                    transformation_matrices, pred_sdf, distances
+                )
 
-                total_loss = l1_value + decomp_value
+                total_loss = main_loss_value + decomp_value + guidance_value
                 total_loss.backward()
 
                 if grad_clip:
@@ -216,8 +226,9 @@ class Trainer:
 
                 self.optimizer.step()
 
-                batch_history["l1"].append(l1_value.item())
+                batch_history["main_loss"].append(main_loss_value.item())
                 batch_history["decomposition"].append(decomp_value.item())
+                batch_history["guidance"].append(guidance_value.item())
                 batch_history["total"].append(total_loss.item())
 
                 pbar.set_postfix(
@@ -263,18 +274,24 @@ class Trainer:
             )
 
             latent_means, latent_stds = self.encoder(images)
-            pred_sdf = self.decoder(
+            pred_sdf, transformation_matrices = self.decoder(
                 latent_means, latent_stds, points_coordinates
             )
 
-            l1_value = self.l1_loss(pred_sdf.max(dim=0), distances)
+            # we use min because we want to have union in constructive solid
+            # geometry
+            main_loss_value = self.main_loss(pred_sdf.min(dim=0), distances)
             decomp_value = self.decomposition_loss(pred_sdf)
+            guidance_value = self.guidance_loss(
+                transformation_matrices, pred_sdf, distances
+            )
 
-            total_loss = l1_value + decomp_value
+            total_loss = main_loss_value + decomp_value + guidance_value
             total_loss.backward()
 
-            history["val_l1"].append(l1_value.item())
+            history["val_main_loss"].append(main_loss_value.item())
             history["val_decomposition"].append(decomp_value.item())
+            history["val_guidance"].append(guidance_value.item())
             history["val_total"].append(total_loss.item())
         return {key: np.mean(val) for key, val in history}
 
@@ -311,6 +328,8 @@ def train(config_spec_path: str) -> None:
         spec["number_of_geons"],
         spec["subnet_sizes"],
         optimizer,
+        spec["decomposition_threshold"],
+        spec["guidance_top_nearest_points"],
     )
 
     train_dataset = ImageToSDFDataset(

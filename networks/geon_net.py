@@ -33,6 +33,11 @@ class DenseNetwork(nn.Module, abc.ABC):
         pass
 
 
+class IdentityActivation(nn.Module):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x
+
+
 class SubNetwork(DenseNetwork):
     def __init__(
         self,
@@ -41,16 +46,19 @@ class SubNetwork(DenseNetwork):
         dropout: float = 0.0,
     ):
         super().__init__(input_features, hidden_layers_sizes, dropout)
-        self.layers.append(nn.Linear(hidden_layers_sizes[-1], 1, bias=True))
+        self.classifer = nn.Sequential(
+            nn.Linear(hidden_layers_sizes[-1], 1, bias=True),
+            # to ensure \nabla_{coordinate} {signed distance_function} = 1
+            IdentityActivation(),
+        )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        for layer in self.layers[:-1]:
+        for layer in self.layers:
             x = layer(x)
             if self.dropout >= 0.0:
                 x = torch.dropout(x, p=self.dropout, train=self.training)
             x = torch.relu(x)
-        x = torch.tanh(self.layers[-1](x))
-        return x
+        return self.classifer(x)
 
     def get_required_parameter_count(self) -> int:
         count = 0
@@ -219,7 +227,7 @@ class Decoder(DenseNetwork):
 
     def generate_samples(
         self, latent_codes: torch.Tensor, point_coordinates: torch.Tensor
-    ) -> torch.Tensor:
+    ) -> t.Tuple[torch.Tensor, torch.Tensor]:
         assert len(point_coordinates.shape) == 2
 
         x = latent_codes
@@ -246,6 +254,7 @@ class Decoder(DenseNetwork):
         )
 
         geons_outputs = []
+        transformation_matrices = []
         for i, param_prediction_layer in enumerate(
             self.param_prediction_layers
         ):
@@ -279,8 +288,10 @@ class Decoder(DenseNetwork):
             geons_outputs.append(
                 geon(local_points_features / scaling) * scaling
             )
+            transformation_matrices.append(transform_matrix)
         geons = torch.stack(geons_outputs, dim=0)
-        return geons
+        transformation_matrices = torch.stack(transformation_matrices, dim=0)
+        return geons, transformation_matrices
 
     def forward(
         self,

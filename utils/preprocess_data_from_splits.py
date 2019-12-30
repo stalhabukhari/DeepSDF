@@ -166,7 +166,7 @@ def process_meshes(
             f"{len(class_data.values())} instances"
         )
 
-        for instance_dir, instance_data in class_data.items():
+        for instance_dir, instance_data in tqdm.tqdm(class_data.items()):
             shape_dir = dest_dir / class_name / instance_dir
             shape_dir.mkdir(exist_ok=True, parents=True)
             processed_file_path = (

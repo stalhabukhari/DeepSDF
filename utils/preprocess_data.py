@@ -177,7 +177,7 @@ def process_meshes(
 
         total_instances += len(instances_folders)
 
-        for instance_folder in instances_folders:
+        for instance_folder in tqdm.tqdm(instances_folders):
             output_shape_dir = dest_dir / class_name / instance_folder.name
             output_shape_dir.mkdir(exist_ok=True, parents=True)
             processed_file_path = (
@@ -264,7 +264,7 @@ def process_meshes(
         max_workers=int(num_threads)
     ) as executor:
 
-        for (mesh_filepath, target_filepath, specific_args,) in tqdm.tqdm(
+        for mesh_filepath, target_filepath, specific_args in tqdm.tqdm(
             mesh_targets_and_specific_args
         ):
             executor.submit(

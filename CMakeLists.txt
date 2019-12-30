@@ -1,6 +1,8 @@
 project("GeonNets")
 cmake_minimum_required(VERSION 3.0)
 
+set(CMAKE_BUILD_TYPE Debug)
+
 find_package(CLI11 CONFIG REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(nanoflann REQUIRED)
@@ -23,3 +25,9 @@ target_include_directories(SampleVisibleMeshSurface PRIVATE third-party/cnpy)
 target_link_libraries(SampleVisibleMeshSurface PRIVATE CLI11::CLI11 pangolin cnpy Eigen3::Eigen nanoflann::nanoflann)
 target_compile_features(SampleVisibleMeshSurface PRIVATE cxx_std_14)
 set_target_properties(SampleVisibleMeshSurface PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")
+
+add_executable(RenderImage src/RenderImage.cpp src/RenderShaderProgram.cpp src/Utils.cpp)
+target_include_directories(RenderImage PRIVATE third-party/cnpy)
+target_link_libraries(RenderImage PRIVATE CLI11::CLI11 pangolin cnpy Eigen3::Eigen nanoflann::nanoflann)
+target_compile_features(RenderImage PRIVATE cxx_std_14)
+set_target_properties(RenderImage PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/bin")

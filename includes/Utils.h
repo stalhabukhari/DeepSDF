@@ -1,6 +1,7 @@
 // Copyright 2004-present Facebook. All Rights Reserved.
-
 #include <vector>
+#include "tiny_obj_loader.h"
+
 
 // NB: This differs from the GitHub version due to the different
 // location of the nanoflann header when installing from source
@@ -8,6 +9,7 @@
 #include <pangolin/geometry/geometry.h>
 #include <pangolin/pangolin.h>
 #include <Eigen/Core>
+
 
 struct KdVertexList {
  public:
@@ -64,5 +66,11 @@ std::pair<Eigen::Vector3f, float> ComputeNormalizationParameters(
 
 float BoundingCubeNormalization(
     pangolin::Geometry& geom,
+    const bool fitToUnitSphere,
+    const float buffer = 1.03);
+
+float BoundingCubeNormalizationFromTinyObj(
+    std::vector<tinyobj::shape_t>& geom,
+    tinyobj::attrib_t& attrib,
     const bool fitToUnitSphere,
     const float buffer = 1.03);

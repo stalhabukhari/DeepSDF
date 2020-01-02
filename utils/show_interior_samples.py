@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 # Copyright 2004-present Facebook. All Rights Reserved.
+import sys
+
+sys.path.append("../Pangolin/build/src")
+import os
 
 import ctypes
 import sys
@@ -9,6 +13,7 @@ import OpenGL.GL as gl
 import geon_nets.data
 import pypangolin as pango
 
+
 if __name__ == "__main__":
 
     npz_filename = sys.argv[1]
@@ -16,6 +21,7 @@ if __name__ == "__main__":
     data = geon_nets.data.read_sdf_samples_into_ram(npz_filename)
 
     xyz_neg = data[1][:, 0:3].numpy().astype(ctypes.c_float)
+    xyz_pos = data[0][:, 0:3].numpy().astype(ctypes.c_float)
 
     win = pango.CreateWindowAndBind(
         "Interior Samples | " + npz_filename, 640, 480

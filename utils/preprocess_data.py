@@ -162,7 +162,9 @@ def process_meshes(
     with open(dataset_info_path) as f:
         dataset_info = json.load(f)
 
-    meshes_classes_to_process = list(dataset_info.keys())
+    meshes_classes_to_process = list(
+        [folder.name for folder in source_dir.glob("*") if folder.is_dir()]
+    )
 
     not_existing_meshes = []
     not_existing_renderings = []
@@ -183,7 +185,7 @@ def process_meshes(
             processed_file_path = (
                 output_shape_dir / f"samples{processed_file_extension}"
             )
-            if skip and processed_file_path.is_file():
+            if skip and processed_file_path.exists():
                 logging.debug(f"skipping {processed_file_path.as_posix()}")
                 continue
 
@@ -193,10 +195,6 @@ def process_meshes(
                 )
                 if not mesh_filename.exists():
                     not_existing_meshes.append(instance_folder.parent.name)
-                    continue
-
-                if not (instance_folder / "rendering").exists():
-                    not_existing_renderings.append(instance_folder.parent.name)
                     continue
 
                 specific_args = []
@@ -229,12 +227,12 @@ def process_meshes(
                 )
 
             except geon_nets.data.NoMeshFileError:
-                logging.warning(
+                logging.info(
                     "No mesh found for instance "
                     + (instance_folder.parent / instance_folder.name)
                 )
             except geon_nets.data.MultipleMeshFileError:
-                logging.warning(
+                logging.info(
                     "Multiple meshes found for instance "
                     + (instance_folder.parent / instance_folder.name)
                 )
@@ -259,6 +257,9 @@ def process_meshes(
     logging.info(
         f"Counts of classes without renderings: "
         f"{Counter(not_existing_renderings)}"
+    )
+    logging.info(
+        f"Number of meshes to process: {len(mesh_targets_and_specific_args)}"
     )
     with concurrent.futures.ThreadPoolExecutor(
         max_workers=int(num_threads)

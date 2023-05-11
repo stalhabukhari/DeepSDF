@@ -16,7 +16,7 @@ RUN apt-get update --fix-missing \
     && apt-get upgrade -y
 
 # Pangolin
-RUN git clone https://github.com/stevenlovegrove/Pangolin.git
+RUN git clone -b v0.6 https://github.com/stevenlovegrove/Pangolin.git
 RUN apt-get install -y \
     libgl1-mesa-dev \
     libglew-dev \
@@ -42,6 +42,7 @@ RUN apt-get install -y \
 
 RUN apt-get install -y python3.7 python3-pip python3.7-dev
 RUN python3.7 -mpip install \
+    Cython \
     numpy \
     pyopengl \
     Pillow \
@@ -106,7 +107,7 @@ RUN apt-get update --fix-missing && \
 RUN wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh && \
     /bin/bash ~/miniconda.sh -b -p /opt/conda && \
     rm ~/miniconda.sh && \
-    /opt/conda/bin/conda clean -tipsy && \
+    /opt/conda/bin/conda clean -tipqy && \
     ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
     echo ". /opt/conda/etc/profile.d/conda.sh" >> ~/.bashrc && \
     echo "conda activate base" >> ~/.bashrc

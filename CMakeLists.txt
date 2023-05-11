@@ -5,6 +5,7 @@ find_package(CLI11 CONFIG REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(nanoflann REQUIRED)
 find_package(Pangolin REQUIRED)
+find_package(Threads REQUIRED)
 
 add_subdirectory(third-party/cnpy)
 

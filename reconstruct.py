@@ -274,12 +274,15 @@ if __name__ == "__main__":
                 os.makedirs(os.path.dirname(mesh_filename))
 
             if not save_latvec_only:
-                start = time.time()
-                with torch.no_grad():
-                    deep_sdf.mesh.create_mesh(
-                        decoder, latent, mesh_filename, N=256, max_batch=int(2 ** 18)
-                    )
-                logging.debug("total time: {}".format(time.time() - start))
+                try:
+                    start = time.time()
+                    with torch.no_grad():
+                        deep_sdf.mesh.create_mesh(
+                            decoder, latent, mesh_filename, N=256, max_batch=int(2 ** 18)
+                        )
+                    logging.debug("total time: {}".format(time.time() - start))
+                except Exception as e:
+                    print(f"Could not create mesh for {mesh_filename} due to exception: {e}")
 
             if not os.path.exists(os.path.dirname(latent_filename)):
                 os.makedirs(os.path.dirname(latent_filename))

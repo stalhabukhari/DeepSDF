@@ -60,6 +60,7 @@ def create_mesh(
 
     end = time.time()
     print("sampling takes: %f" % (end - start))
+    print(f"[sdf_values] min: {sdf_values.min()} | max: {sdf_values.max()}")
 
     convert_sdf_samples_to_ply(
         sdf_values.data.cpu(),

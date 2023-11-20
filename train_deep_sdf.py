@@ -14,6 +14,8 @@ import time
 import deep_sdf
 import deep_sdf.workspace as ws
 
+logging.basicConfig(level=logging.DEBUG)
+
 
 class LearningRateSchedule:
     def get_learning_rate(self, epoch):

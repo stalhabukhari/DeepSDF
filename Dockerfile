@@ -136,11 +136,11 @@ RUN mkdir build \
 
 ENV PANGOLIN_WINDOW_URI headless://
 
-RUN mkdir data/ShapeNetCore.v2 -p
-RUN mkdir data/ShapeNetCore.v2-DeepSDF -p
-
-VOLUME /usr/src/sdf/data/ShapeNetCore.v2
-VOLUME /usr/src/sdf/data/ShapeNetCore.v2-DeepSDF
-
-
-CMD ["bash", "-c", "./process_whole_dataset.sh"]
+#RUN mkdir data/ShapeNetCore.v2 -p
+#RUN mkdir data/ShapeNetCore.v2-DeepSDF -p
+#
+#VOLUME /usr/src/sdf/data/ShapeNetCore.v2
+#VOLUME /usr/src/sdf/data/ShapeNetCore.v2-DeepSDF
+#
+#
+#CMD ["bash", "-c", "./process_whole_dataset.sh"]
